@@ -111,7 +111,7 @@ class GoBoard(object):
 
     def _is_legal_simple(self, point: GO_POINT, color: GO_COLOR):
         assert self.pt(1, 1) <= point <= self.pt(self.size, self.size), "out of bound"
-        assert color==self.current_player, "not current player"
+        #assert color==self.current_player, f"not current player {self.current_player}"
         if self.board[point] != EMPTY:
             return False
         return True
@@ -285,7 +285,7 @@ class GoBoard(object):
             if not self._has_liberty(block):  # undo suicide move
                 self.board[point] = EMPTY
                 return False
-        self.current_player = opponent(color)
+        self.current_player = opp_color
         return True
         
 
