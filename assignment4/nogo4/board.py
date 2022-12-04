@@ -100,9 +100,6 @@ class GoBoard(object):
         return not self._has_liberty(opp_block)
 
     def _detect_captures(self, point: GO_POINT, opp_color: GO_COLOR) -> bool:
-        """
-        Did move on point capture something?
-        """
         for nb in self.neighbors_of_color(point, opp_color):
             if self._detect_capture(nb):
                 return True
@@ -120,13 +117,14 @@ class GoBoard(object):
         """
         Check whether it is legal for color to play on point
         """
-        if not self._is_legal_simple(point,color):
+        if not self._is_legal_simple(point, color):
             return False
         opp_color = opponent(color)
         self.board[point] = color
         legal = True
         has_capture = self._detect_captures(point, opp_color)
         if has_capture:
+            self.board[point] = EMPTY
             return False
         if not self._stone_has_liberty(point):
             block = self._block_of(point)
