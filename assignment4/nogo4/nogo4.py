@@ -14,6 +14,8 @@ from board_util import GoBoardUtil
 from engine import GoEngine
 
 
+
+
 class NoGo:
     def __init__(self):
         """
@@ -35,6 +37,9 @@ class NoGo:
                                                 use_eye_filter=False)
 
 
+
+
+    
 
 def run() -> None:
     """
