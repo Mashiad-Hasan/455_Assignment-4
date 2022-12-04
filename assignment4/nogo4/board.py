@@ -60,7 +60,9 @@ class GoBoard(object):
         self.current_player: GO_COLOR = BLACK
         self.maxpoint: int = board_array_size(size)
         self.board: np.ndarray[GO_POINT] = np.full(self.maxpoint, BORDER, dtype=GO_POINT)
+        self.liberty_of: np.ndarray[GO_POINT] = np.full(self.maxpoint, NO_POINT, dtype=GO_POINT)
         self._initialize_empty_points(self.board)
+        self._initialize_neighbors()
         
         
     def copy(self) -> 'GoBoard':
@@ -79,19 +81,59 @@ class GoBoard(object):
     def pt(self, row: int, col: int) -> GO_POINT:
         return coord_to_point(row, col, self.size)
 
-        
-        
+    def _fast_liberty_check(self, nb_point: GO_POINT) -> bool:
+        lib = self.liberty_of[nb_point]
+        if lib != NO_POINT and self.get_color(lib) == EMPTY:
+            return True  # quick exit, block has a liberty
+        if self._stone_has_liberty(nb_point):
+            return True  # quick exit, no need to look at whole block
+        return False
+
+    def _detect_capture(self, nb_point: GO_POINT) -> bool:
+        """
+        Check whether opponent block on nb_point is captured.
+        Returns boolean.
+        """
+        if self._fast_liberty_check(nb_point):
+            return False
+        opp_block = self._block_of(nb_point)
+        return not self._has_liberty(opp_block)
+
+    def _detect_captures(self, point: GO_POINT, opp_color: GO_COLOR) -> bool:
+        """
+        Did move on point capture something?
+        """
+        for nb in self.neighbors_of_color(point, opp_color):
+            if self._detect_capture(nb):
+                return True
+        return False
+
+
+    def _is_legal_simple(self, point: GO_POINT, color: GO_COLOR):
+        assert self.pt(1, 1) <= point <= self.pt(self.size, self.size), "out of bound"
+        assert color==self.current_player, "not current player"
+        if self.board[point] != EMPTY:
+            return False
+        return True
+
     def is_legal(self, point: GO_POINT, color: GO_COLOR) -> bool:
         """
         Check whether it is legal for color to play on point
-        This method tries to play the move on a temporary copy of the board.
-        This prevents the board from being modified by the move
         """
-        board_copy: GoBoard = self.copy()
-        can_play_move = board_copy.play_move(point, color)
-        return can_play_move
-
-        
+        if not self._is_legal_simple(point,color):
+            return False
+        opp_color = opponent(color)
+        self.board[point] = color
+        legal = True
+        has_capture = self._detect_captures(point, opp_color)
+        if has_capture:
+            return False
+        if not self._stone_has_liberty(point):
+            block = self._block_of(point)
+            if not self._has_liberty(block, read_only=True):  # suicide
+                legal = False
+        self.board[point] = EMPTY
+        return legal
            
     def get_empty_points(self) -> np.ndarray:
         """
@@ -116,6 +158,25 @@ class GoBoard(object):
         for row in range(1, self.size + 1):
             start: int = self.row_start(row)
             board_array[start : start + self.size] = EMPTY
+
+    def _on_board_neighbors(self, point: GO_POINT) -> List:
+        nbs: List[GO_POINT] = []
+        for nb in self._neighbors(point):
+            if self.board[nb] != BORDER:
+                nbs.append(nb)
+        return nbs
+
+    def _initialize_neighbors(self) -> None:
+        """
+        precompute neighbor array.
+        For each point on the board, store its list of on-the-board neighbors
+        """
+        self.neighbors: List[List[GO_POINT]] = []
+        for point in range(self.maxpoint):
+            if self.board[point] == BORDER:
+                self.neighbors.append([])
+            else:
+                self.neighbors.append(self._on_board_neighbors(GO_POINT(point)))
 
     def is_eye(self, point: GO_POINT, color: GO_COLOR) -> bool:
         """
@@ -146,16 +207,35 @@ class GoBoard(object):
                 return False
         return True
 
-    def _has_liberty(self, block: np.ndarray) -> bool:
+    def _stone_has_liberty(self, stone: GO_POINT) -> bool:
+        lib = self.find_neighbor_of_color(stone, EMPTY)
+        return lib != NO_POINT
+
+    def _get_liberty(self, block: np.ndarray) -> GO_POINT:
+        """
+        Find any liberty of the given block.
+        Returns NO_POINT in case there is no liberty.
+        block is a numpy boolean array
+        """
+        for stone in where1d(block):
+            lib: GO_POINT = self.find_neighbor_of_color(stone, EMPTY)
+            if lib != NO_POINT:
+                return lib
+        return NO_POINT
+
+    def _has_liberty(self, block: np.ndarray, read_only: bool = False) -> bool:
         """
         Check if the given block has any liberty.
         block is a numpy boolean array
         """
-        for stone in where1d(block):
-            empty_nbs = self.neighbors_of_color(stone, EMPTY)
-            if empty_nbs:
-                return True
-        return False
+        lib = self._get_liberty(block)
+        if lib == NO_POINT:
+            return False
+        assert self.get_color(lib) == EMPTY
+        if not read_only:
+            for stone in where1d(block):
+                self.liberty_of[stone] = lib
+        return True
         
         
     def _block_of(self, stone: GO_POINT) -> np.ndarray:
@@ -185,54 +265,39 @@ class GoBoard(object):
                     marker[nb] = True
                     pointstack.append(nb)
         return marker
-        
-        
-    def _detect_and_process_capture(self, nb_point: GO_POINT) -> GO_POINT:
-        """
-        Check whether opponent block on nb_point is captured.
-        If yes, remove the stones.
-        Returns the stone if only a single stone was captured,
-        and returns NO_POINT otherwise.
-        """
-        opp_block = self._block_of(nb_point)
-        return not self._has_liberty(opp_block)
-
 
     def play_move(self, point: GO_POINT, color: GO_COLOR) -> bool:
         """
         Play a move of color on point
         Returns whether move was legal
         """
-        
         assert is_black_white(color)
-        
-        if self.board[point] != EMPTY:
+        if not self._is_legal_simple(point,color):
             return False
-            
         opp_color = opponent(color)
-        in_enemy_eye = self._is_surrounded(point, opp_color)
         self.board[point] = color
-        neighbors = self._neighbors(point)
-        
-        #check for capturing
-        for nb in neighbors:
-            if self.board[nb] == opp_color:
-                captured = self._detect_and_process_capture(nb)
-                if captured:
-                #undo capturing move
-                    self.board[point] = EMPTY
-                    return False
-                    
-                    
-        #check for suicide
-        block = self._block_of(point)
-        if not self._has_liberty(block):  
-            # undo suicide move
+        if self._detect_captures(point, opp_color):
             self.board[point] = EMPTY
             return False
-        
+        if not self._stone_has_liberty(point):
+            # check suicide of whole block
+            block = self._block_of(point)
+            if not self._has_liberty(block):  # undo suicide move
+                self.board[point] = EMPTY
+                return False
         self.current_player = opponent(color)
         return True
+        
+
+
+    def find_neighbor_of_color(self, point: GO_POINT, color: GO_COLOR) -> GO_POINT:
+        """ Return one neighbor of point of given color, if exists
+            returns NO_POINT otherwise.
+        """
+        for nb in self.neighbors[point]:
+            if self.get_color(nb) == color:
+                return nb
+        return NO_POINT
 
 
 
