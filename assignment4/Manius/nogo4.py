@@ -28,10 +28,11 @@ def count_at_depth(node, depth, nodesAtDepth):
 
 class NoGo:
     def __init__(self,
-                 sim: int=100,
+                 sim: int=500,
                  check_selfatari: bool=True,
                  limit: int = 49,
                  exploration: float = 0.4,
+                 timelimit: int = 27
                  ):
         """
         Go player that selects moves randomly from the set of legal moves.
@@ -46,7 +47,7 @@ class NoGo:
             version number (used by the GTP interface).
         """
         GoSimulationEngine.__init__(self, "NoGo4", 1.0,
-                                    sim, check_selfatari, limit)
+                                    sim, check_selfatari, limit, timelimit)
         self.MCTS = MCTS()
         self.exploration = exploration
 
@@ -65,7 +66,9 @@ class NoGo:
             limit=self.limit,
             check_selfatari=self.check_selfatari,
             num_simulation=self.sim,
-            exploration=self.exploration
+            exploration=self.exploration,
+            timelimit=self.timelimit,
+            rave=1000
         )
         self.MCTS.print_pi(board)
         self.update(move)
