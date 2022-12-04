@@ -234,6 +234,28 @@ class GoBoard(object):
         self.current_player = opponent(color)
         return True
 
+
+
+    def move(self, action: GO_POINT, color: GO_COLOR) -> bool:
+        """
+        I defined this.
+
+        Play a move of color on point
+        Returns whether move was legal
+        """
+                    
+        
+        assert is_black_white(color)
+        
+        if self.board[action] != EMPTY:
+            return False
+        
+        self.board[action] = color
+        
+        self.current_player = opponent(color)
+
+        return self.board
+
     def neighbors_of_color(self, point: GO_POINT, color: GO_COLOR) -> List:
         """ List of neighbors of point of given color """
         nbc: List[GO_POINT] = []
