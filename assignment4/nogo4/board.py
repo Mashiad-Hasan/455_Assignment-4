@@ -312,14 +312,14 @@ class GoBoard(object):
         
         assert is_black_white(color)
         
-        if self.board[action] != EMPTY:
-            return False
+        #if self.board[action] != EMPTY:
+            #return False
         
         self.board[action] = color
         
         self.current_player = opponent(color)
 
-        return self.board
+        #return self.board
 
     def neighbors_of_color(self, point: GO_POINT, color: GO_COLOR) -> List:
         """ List of neighbors of point of given color """
