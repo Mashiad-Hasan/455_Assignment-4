@@ -11,13 +11,28 @@ from gtp_connection import GtpConnection
 from board_base import DEFAULT_SIZE, GO_POINT, GO_COLOR
 from board import GoBoard
 from board_util import GoBoardUtil
-from engine import GoEngine
+from engine import GoSimulationEngine
+from mcts import TreeNode,MCTS
+
+
+def count_at_depth(node, depth, nodesAtDepth):
+    if not node.expanded:
+        return
+    nodesAtDepth[depth] += 1
+    for _, child in node.children.items():
+        count_at_depth(child, depth + 1, nodesAtDepth)
+
 
 
 
 
 class NoGo:
-    def __init__(self):
+    def __init__(self,
+                 sim: int=100,
+                 check_selfatari: bool=True,
+                 limit: int = 49,
+                 exploration: float = 0.4,
+                 ):
         """
         Go player that selects moves randomly from the set of legal moves.
         Does not use the fill-eye filter.
@@ -30,11 +45,33 @@ class NoGo:
         version : float
             version number (used by the GTP interface).
         """
-        GoEngine.__init__(self, "NoGo4", 1.0)
+        GoSimulationEngine.__init__(self, "NoGo4", 1.0,
+                                    sim, check_selfatari, limit)
+        self.MCTS = MCTS()
+        self.exploration = exploration
+
+    def reset(self) -> None:
+        self.MCTS = MCTS()
+
+
+    def update(self, move: GO_POINT) -> None:
+        self.parent = self.MCTS.root
+        self.MCTS.update_with_move(move)
 
     def get_move(self, board: GoBoard, color: GO_COLOR) -> GO_POINT:
-        return GoBoardUtil.generate_random_move(board, color,
-                                                use_eye_filter=False)
+        move = self.MCTS.get_move(
+            board,
+            color,
+            limit=self.limit,
+            check_selfatari=self.check_selfatari,
+            num_simulation=self.sim,
+            exploration=self.exploration
+        )
+        self.MCTS.print_pi(board)
+        self.update(move)
+        return move
+        # return GoBoardUtil.generate_random_move(board, color,
+        #                                         use_eye_filter=False)
 
 
 
