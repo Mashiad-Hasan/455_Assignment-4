@@ -354,7 +354,7 @@ class GtpConnection:
         color = color_to_int(board_color)
         move = self.go_engine.get_move(self.board, color)
         if move is None:
-            self.respond('unknown')
+            self.respond('resign')
             return
 
         move_coord = point_to_coord(move, self.board.size)
