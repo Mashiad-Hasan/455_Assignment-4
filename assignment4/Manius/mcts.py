@@ -31,6 +31,20 @@ def uct_rave(child_wins: int,
         exploration * np.sqrt(np.log(parent_visits) / child_visits)
 
 
+def uct_rave_beta(child_wins: int,
+             child_visits: int,
+             parent_visits: int,
+             exploration: float,
+             amaf_wins: int,
+             amaf_visits: int,
+             b_squared: float
+             ) -> float:
+    if amaf_visits:
+        beta=amaf_visits/(child_visits+amaf_visits+4*b_squared*child_visits*amaf_visits)
+    return (1-beta)*(child_wins / child_visits) + beta*(amaf_wins/amaf_visits) +\
+        exploration * np.sqrt(np.log(parent_visits) / child_visits)
+
+
 class TreeNode:
     """
     A node in the MCTS tree
@@ -65,7 +79,7 @@ class TreeNode:
                 self.children[move] = node
                 self.expanded = True
 
-    def select_in_tree(self, exploration: float, rave_k:int) -> Tuple[GO_POINT, 'TreeNode']:
+    def select_in_tree(self, exploration: float, rave:float) -> Tuple[GO_POINT, 'TreeNode']:
         """
         Select move among children that gives maximizes UCT.
         If number of visits are zero for a node, value for that node is infinite, so definitely will get selected
@@ -80,8 +94,8 @@ class TreeNode:
             if child.n_visits == 0:
                 return child.move, child
             # uct_val = uct(child.n_opp_wins, child.n_visits, self.n_visits, exploration)
-            uct_val=uct_rave(child.n_opp_wins, child.n_visits, self.n_visits, exploration,
-                             child.amaf_n_opp_wins,child.amaf_n_visits, rave_k)
+            uct_val=uct_rave_beta(child.n_opp_wins, child.n_visits, self.n_visits, exploration,
+                             child.amaf_n_opp_wins,child.amaf_n_visits, rave)
             if uct_val > n_uct_val:
                 n_uct_val = uct_val
                 n_child = child

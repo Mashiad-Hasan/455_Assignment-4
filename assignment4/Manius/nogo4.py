@@ -31,8 +31,9 @@ class NoGo:
                  sim: int=500,
                  check_selfatari: bool=True,
                  limit: int = 49,
-                 exploration: float = 0.4,
-                 timelimit: int = 27
+                 exploration: float = 0.3,
+                 timelimit: int = 27,
+                 rave: float = 0.04
                  ):
         """
         Go player that selects moves randomly from the set of legal moves.
@@ -50,6 +51,7 @@ class NoGo:
                                     sim, check_selfatari, limit, timelimit)
         self.MCTS = MCTS()
         self.exploration = exploration
+        self.rave=rave
 
     def reset(self) -> None:
         self.MCTS = MCTS()
@@ -68,7 +70,7 @@ class NoGo:
             num_simulation=self.sim,
             exploration=self.exploration,
             timelimit=self.timelimit,
-            rave=1000
+            rave=self.rave
         )
         self.MCTS.print_pi(board)
         self.update(move)
