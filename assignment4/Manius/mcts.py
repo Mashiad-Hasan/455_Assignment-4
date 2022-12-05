@@ -6,7 +6,8 @@ Implements a game tree for MCTS in class TreeNode, and the search itself in clas
 """
 import numpy as np
 import sys
-from typing import Dict, Tuple
+import time
+from typing import Dict, Tuple, Set
 
 from board_base import opponent, BLACK, GO_COLOR, GO_POINT, NO_POINT, coord_to_point
 from board import GoBoard
@@ -15,6 +16,33 @@ from board_util import GoBoardUtil
 
 def uct(child_wins: int, child_visits: int, parent_visits: int, exploration: float) -> float:
     return child_wins / child_visits + exploration * np.sqrt(np.log(parent_visits) / child_visits)
+
+
+def uct_rave(child_wins: int,
+             child_visits: int,
+             parent_visits: int,
+             exploration: float,
+             amaf_wins: int,
+             amaf_visits: int,
+             k: int
+             ) -> float:
+    beta=np.sqrt(k/(3*parent_visits+k))
+    return (1-beta)*(child_wins / child_visits) + beta*(amaf_wins/amaf_visits) +\
+        exploration * np.sqrt(np.log(parent_visits) / child_visits)
+
+
+def uct_rave_beta(child_wins: int,
+             child_visits: int,
+             parent_visits: int,
+             exploration: float,
+             amaf_wins: int,
+             amaf_visits: int,
+             b_squared: float
+             ) -> float:
+    if amaf_visits:
+        beta=amaf_visits/(child_visits+amaf_visits+4*b_squared*child_visits*amaf_visits)
+    return (1-beta)*(child_wins / child_visits) + beta*(amaf_wins/amaf_visits) +\
+        exploration * np.sqrt(np.log(parent_visits) / child_visits)
 
 
 class TreeNode:
@@ -30,6 +58,9 @@ class TreeNode:
         self.parent: 'TreeNode' = self
         self.children: Dict[TreeNode] = {}
         self.expanded: bool = False
+        # rave para
+        self.amaf_n_visits: int = 0
+        self.amaf_n_opp_wins: int = 0
 
     def set_parent(self, parent: 'TreeNode') -> None:
         self.parent: 'TreeNode' = parent
@@ -48,7 +79,7 @@ class TreeNode:
                 self.children[move] = node
                 self.expanded = True
 
-    def select_in_tree(self, exploration: float) -> Tuple[GO_POINT, 'TreeNode']:
+    def select_in_tree(self, exploration: float, rave:float) -> Tuple[GO_POINT, 'TreeNode']:
         """
         Select move among children that gives maximizes UCT.
         If number of visits are zero for a node, value for that node is infinite, so definitely will get selected
@@ -62,7 +93,9 @@ class TreeNode:
         for move, child in self.children.items():
             if child.n_visits == 0:
                 return child.move, child
-            uct_val = uct(child.n_opp_wins, child.n_visits, self.n_visits, exploration)
+            # uct_val = uct(child.n_opp_wins, child.n_visits, self.n_visits, exploration)
+            uct_val=uct_rave_beta(child.n_opp_wins, child.n_visits, self.n_visits, exploration,
+                             child.amaf_n_opp_wins,child.amaf_n_visits, rave)
             if uct_val > n_uct_val:
                 n_uct_val = uct_val
                 n_child = child
@@ -80,11 +113,17 @@ class TreeNode:
         else:
             return None, None
 
-    def update(self, winner: GO_COLOR) -> None:
+    def update(self, winner: GO_COLOR, moves:Set) -> None:
         self.n_opp_wins += self.color != winner
         self.n_visits += 1
+        if self.move in moves:
+            self.amaf_n_opp_wins += self.color != winner
+            self.amaf_n_visits += 1
         if not self.is_root():
-            self.parent.update(winner)
+            self.parent.update(winner, moves)
+        else:
+            self.amaf_n_opp_wins += self.color != winner
+            self.amaf_n_visits += 1
 
     def is_leaf(self) -> bool:
         """
@@ -117,7 +156,7 @@ class MCTS:
         if not node.expanded:
             node.expand(board, color)
         while not node.is_leaf():
-            move, next_node = node.select_in_tree(self.exploration)
+            move, next_node = node.select_in_tree(self.exploration, self.rave)
             assert board.play_move(move, color)
             color = opponent(color)
             node = next_node
@@ -125,25 +164,29 @@ class MCTS:
             node.expand(board, color)
 
         assert board.current_player == color
-        winner = self.rollout(board, color)
-        node.update(winner)
+        winner,moves = self.rollout(board, color, move)
+        node.update(winner,moves)
 
-    def play_game(self,board, limit):
+    def play_game(self, board, limit, vp: GO_COLOR, init_move) -> (GO_COLOR, Set):
+        moves=set([init_move])
         for _ in range(limit):
             color = board.current_player
             move = GoBoardUtil.generate_random_move(board, color, True)
             if move:
                 board.play_move(move, color)
+                if color==vp:
+                    moves.add(move)
             else:
                 break
-        return opponent(board.current_player)
+        return opponent(board.current_player), moves
 
-    def rollout(self, board: GoBoard, color: GO_COLOR) -> GO_COLOR:
+    def rollout(self, board: GoBoard, color: GO_COLOR, init_move) -> (GO_COLOR, Set):
         """
         Use the rollout policy to play until the end of the game, returning the winner of the game
         +1 if black wins, +2 if white wins, 0 if it is a tie.
+        Also, the set of moves.
         """
-        return self.play_game(board, limit=49)
+        return self.play_game(board, self.limit, color, init_move)
 
     def get_move(
             self,
@@ -152,11 +195,15 @@ class MCTS:
             limit: int,
             check_selfatari: bool,
             num_simulation: int,
-            exploration: float
+            exploration: float,
+            timelimit: int,
+            rave: float
     ) -> GO_POINT:
         """
         Runs all playouts sequentially and returns the most visited move.
         """
+        s_time=time.time_ns()
+
         if self.toplay != color:
             sys.stderr.write("Tree is for wrong color to play. Deleting.\n")
             sys.stderr.flush()
@@ -165,6 +212,7 @@ class MCTS:
         self.limit = limit
         self.check_selfatari = check_selfatari
         self.exploration = exploration
+        self.rave = rave
 
         if not self.root.expanded:
             self.root.expand(board, color)
@@ -172,6 +220,8 @@ class MCTS:
         for _ in range(num_simulation * len(self.root.children)):
             cboard = board.copy()
             self.search(cboard, color)
+            if time.time_ns()-s_time >= timelimit*1e+9:
+                break
 
         best_move, best_child = self.root.select_best_child()
         return best_move

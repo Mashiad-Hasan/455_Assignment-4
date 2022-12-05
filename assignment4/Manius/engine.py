@@ -23,7 +23,7 @@ class GoEngine:
 
 class GoSimulationEngine(GoEngine):
     def __init__(self, name: str, version: float,
-                 sim: int, check_selfatari: bool, limit: int = 100) -> None:
+                 sim: int, check_selfatari: bool, limit: int = 49, timelimit: int = 28) -> None:
         """
         Go player that selects moves by simulation.
         """
@@ -31,6 +31,7 @@ class GoSimulationEngine(GoEngine):
         self.sim = sim
         self.check_selfatari = check_selfatari
         self.limit = limit
+        self.timelimit = timelimit
 
     def simulate(self, board: GoBoard, move: GO_POINT, toplay: GO_COLOR) -> GO_COLOR:
         """
