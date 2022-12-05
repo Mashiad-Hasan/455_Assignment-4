@@ -205,7 +205,7 @@ class MCTS:
         s_time=time.time_ns()
 
         if self.toplay != color:
-            sys.stderr.write("Tree is for wrong color to play. Deleting.\n")
+            sys.stderr.write(f"Tree is for wrong color ({color}{self.toplay}) to play. Deleting.\n")
             sys.stderr.flush()
             self.toplay = color
             self.root = TreeNode(color)

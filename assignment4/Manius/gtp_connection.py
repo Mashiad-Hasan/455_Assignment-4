@@ -179,6 +179,7 @@ class GtpConnection:
     def clear_board_cmd(self, args: List[str]) -> None:
         """ clear the board """
         self.reset(self.board.size)
+        self.go_engine.reset()
         self.respond()
 
     def boardsize_cmd(self, args: List[str]) -> None:
@@ -186,6 +187,7 @@ class GtpConnection:
         Reset the game with new boardsize args[0]
         """
         self.reset(int(args[0]))
+        self.go_engine.reset()
         self.respond()
 
     def showboard_cmd(self, args: List[str]) -> None:
@@ -329,7 +331,7 @@ class GtpConnection:
                 move = coord_to_point(coord[0], coord[1], self.board.size)
             else:
                 self.error(
-                    "Error executing move {} converted from {}".format(move, args[1])
+                    "Error executing move {} converted from {}".format(coord, args[1])
                 )
                 return
 
@@ -338,6 +340,7 @@ class GtpConnection:
                 self.respond('illegal move')
                 return
             else:
+                self.go_engine.update(move)
                 self.debug_msg(
                     "Move: {}\nBoard:\n{}\n".format(board_move, self.board2d())
                 )
