@@ -31,8 +31,8 @@ class NoGo:
                  sim: int=500,
                  check_selfatari: bool=True,
                  limit: int = 49,
-                 exploration: float = 0.3,
-                 timelimit: int = 27,
+                 exploration: float = 1.0,
+                 timelimit: int = 25,
                  rave: float = 0.04
                  ):
         """
