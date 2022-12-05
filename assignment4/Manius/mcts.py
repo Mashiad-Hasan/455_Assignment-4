@@ -157,7 +157,8 @@ class MCTS:
             node.expand(board, color)
         while not node.is_leaf():
             move, next_node = node.select_in_tree(self.exploration, self.rave)
-            assert board.play_move(move, color)
+            # assert board.play_move(move, color)
+            board.fast_play_move(move,color)
             color = opponent(color)
             node = next_node
         if not node.expanded:
@@ -172,8 +173,10 @@ class MCTS:
         for _ in range(limit):
             color = board.current_player
             move = GoBoardUtil.generate_random_move(board, color, True)
+            if not move:
+                move = GoBoardUtil.generate_random_move(board, color, False)
             if move:
-                board.play_move(move, color)
+                board.fast_play_move(move, color)
                 if color==vp:
                     moves.add(move)
             else:

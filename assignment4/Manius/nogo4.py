@@ -28,11 +28,11 @@ def count_at_depth(node, depth, nodesAtDepth):
 
 class NoGo:
     def __init__(self,
-                 sim: int=500,
+                 sim: int=1000,
                  check_selfatari: bool=True,
                  limit: int = 49,
-                 exploration: float = 0.3,
-                 timelimit: int = 27,
+                 exploration: float = 0.2,
+                 timelimit: int = 26,
                  rave: float = 0.04
                  ):
         """
@@ -72,6 +72,8 @@ class NoGo:
             timelimit=self.timelimit,
             rave=self.rave
         )
+        if not move:
+            move = GoBoardUtil.generate_random_move(board,color,False)
         self.MCTS.print_pi(board)
         self.update(move)
         return move
