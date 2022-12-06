@@ -3,8 +3,8 @@ import pexpect
 
 # path to the two players
 # player 1 plays first
-player1='Manius/nogo4.py'
-player2='ucb_player/nogo_ucb.py'
+player1='ucb_player/nogo_ucb.py'
+player2='Manius/nogo4.py'
 
 # stats for win/timeout
 # note that timeout is considered lost
@@ -53,6 +53,10 @@ def playSingleGame(alternative=False):
     else:
         p1=pexpect.spawn('python3 '+player2,timeout=TIMEOUT+SAFETY_MARGIN)
         p2=pexpect.spawn('python3 '+player1,timeout=TIMEOUT+SAFETY_MARGIN)
+    fout1 = open('p1.log', 'wb')
+    fout2 = open('p2.log', 'wb')
+    p1.logfile=fout1
+    p2.logfile = fout2
 
     # observer player
     # monitor the game state
@@ -154,6 +158,6 @@ def saveResult():
     f.write("player 2 wins: {}\n".format(win2))
     f.close()
 
-playGames()
+playGames(numGame=4)
 outputResult()
 saveResult()

@@ -285,8 +285,11 @@ class GoBoard(object):
                 return False
         self.current_player = opp_color
         return True
-        
 
+    def fast_play_move(self, point: GO_POINT, color: GO_COLOR) -> bool:
+        self.board[point]=color
+        self.current_player = opponent(color)
+        return True
 
     def find_neighbor_of_color(self, point: GO_POINT, color: GO_COLOR) -> GO_POINT:
         """ Return one neighbor of point of given color, if exists
