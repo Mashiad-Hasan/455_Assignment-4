@@ -28,6 +28,7 @@ def count_at_depth(node, depth, nodesAtDepth):
 def read_weights():
     script_dir = Path(__file__).parent.absolute()
     a=np.empty(65536)
+    # weights adapted from Cmput 455 assignment template
     with open(script_dir/'weights.txt', 'r') as f:
         for line in f:
             ind,val=line.split()

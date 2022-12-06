@@ -1,3 +1,9 @@
+"""
+
+engine.py
+GoSimulationEngine adopted from Cmput 455 sample code Go5
+
+"""
 from board_base import GO_POINT, NO_POINT, GO_COLOR
 from board import GoBoard
 
