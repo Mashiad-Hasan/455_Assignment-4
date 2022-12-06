@@ -13,6 +13,7 @@ from board import GoBoard, opponent
 from board_util import GoBoardUtil
 from engine import GoSimulationEngine
 from mcts import TreeNode,MCTS
+from pathlib import Path
 import numpy as np
 
 
@@ -23,6 +24,15 @@ def count_at_depth(node, depth, nodesAtDepth):
     for _, child in node.children.items():
         count_at_depth(child, depth + 1, nodesAtDepth)
 
+
+def read_weights():
+    script_dir = Path(__file__).parent.absolute()
+    a=np.empty(65536)
+    with open(script_dir/'weights.txt', 'r') as f:
+        for line in f:
+            ind,val=line.split()
+            a[int(ind)]=float(val)
+    return a
 
 
 class NoGo:
@@ -49,7 +59,8 @@ class NoGo:
         """
         GoSimulationEngine.__init__(self, "NoGo4", 1.0,
                                     sim, check_selfatari, limit, timelimit)
-        self.MCTS = MCTS()
+        self.weights = read_weights()
+        self.MCTS = MCTS(self.weights)
         self.exploration = exploration
         self.rave=rave
         self.opening_flag=True
@@ -58,7 +69,7 @@ class NoGo:
         self.op_max=op_max
 
     def reset(self) -> None:
-        self.MCTS = MCTS()
+        self.MCTS = MCTS(self.weights)
 
     def update(self, move: GO_POINT) -> None:
         self.parent = self.MCTS.root

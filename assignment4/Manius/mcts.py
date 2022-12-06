@@ -137,10 +137,11 @@ class TreeNode:
 
 class MCTS:
 
-    def __init__(self) -> None:
+    def __init__(self,weights) -> None:
         self.root: 'TreeNode' = TreeNode(BLACK)
         self.root.set_parent(self.root)
         self.toplay: GO_COLOR = BLACK
+        self.weights = weights
 
     def search(self, board: GoBoard, color: GO_COLOR) -> None:
         """
@@ -183,13 +184,61 @@ class MCTS:
                 break
         return opponent(board.current_player), moves
 
+    def get_weight(self,board,move):
+        positions = [
+            move - board.NS - 1,
+            move - board.NS,
+            move - board.NS + 1,
+            move - 1,
+            move + 1,
+            move + board.NS - 1,
+            move + board.NS,
+            move + board.NS + 1,
+        ]
+        dec = 0
+        i = 0
+        for pos in reversed(positions):
+            dec += board.board[pos] * (4 ** i)  # takes state at the position
+            i += 1
+        try:
+            weight=self.weights[dec]
+            return weight
+        except IndexError:
+            return None
+
+    def play_game_pattern(self, board, limit, vp: GO_COLOR, init_move) -> (GO_COLOR, Set):
+        moves = set([init_move])
+        for _ in range(limit):
+            color = board.current_player
+            legal_moves = GoBoardUtil.generate_legal_moves(board, color)
+            if not legal_moves:
+                return opponent(color), moves
+            pattern_moves = {}
+            total = 0
+            for move in legal_moves:
+                weight = self.get_weight(board, move)
+                if weight:
+                    if move in pattern_moves.keys():
+                        break
+                    total += weight
+                    pattern_moves[move] = weight
+            for key, value in pattern_moves.items():
+                pattern_moves[key] = value / total
+
+            selected_move = np.random.choice(a=list(pattern_moves.keys()), size=1, p=list(pattern_moves.values()))
+            board.fast_play_move(selected_move, board.current_player)
+            if color==vp:
+                moves.add(selected_move)
+        return opponent(board.current_player), moves
+
     def rollout(self, board: GoBoard, color: GO_COLOR, init_move) -> (GO_COLOR, Set):
         """
         Use the rollout policy to play until the end of the game, returning the winner of the game
         +1 if black wins, +2 if white wins, 0 if it is a tie.
         Also, the set of moves.
         """
-        return self.play_game(board, self.limit, color, init_move)
+        # return self.play_game(board, self.limit, color, init_move)
+        return self.play_game_pattern(board, self.limit, color, init_move)
 
     def get_move(
             self,
