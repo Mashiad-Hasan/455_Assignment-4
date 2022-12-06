@@ -1,4 +1,4 @@
-player 1: random_player/nogo_random.py
-player 2: nogo4/nogo4.py
+player 1: Manius/nogo4.py
+player 2: ucb_player/nogo_ucb.py
 player 1 wins: 1
 player 2 wins: 0
