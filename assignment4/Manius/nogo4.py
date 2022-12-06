@@ -32,7 +32,8 @@ class NoGo:
                  limit: int = 49,
                  exploration: float = 0.2,
                  timelimit: int = 26,
-                 rave: float = 0.04
+                 rave: float = 0.04,
+                 op_max: int = 7
                  ):
         """
         Go player that selects moves randomly from the set of legal moves.
@@ -53,7 +54,8 @@ class NoGo:
         self.rave=rave
         self.opening_flag=True
         self.openings=[[57,50,41,59],[9,18,25,11],[15,22,13,31],[63,54,61,47]]
-        self.opening_penalty=[[]]
+        self.op_counter=0
+        self.op_max=op_max
 
     def reset(self) -> None:
         self.MCTS = MCTS()
@@ -81,9 +83,10 @@ class NoGo:
                         move=self.openings[rank[i]][j]
                         break
             if move:
+                self.op_counter+=1
                 break
-        if not move:
-            self.opening_flag=False
+        if (not move) or self.op_counter >= self.op_max:
+            self.opening_flag = False
         return move
 
     def get_move(self, board: GoBoard, color: GO_COLOR) -> GO_POINT:
