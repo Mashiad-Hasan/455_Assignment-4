@@ -225,7 +225,7 @@ class MCTS:
             for key, value in pattern_moves.items():
                 pattern_moves[key] = value / total
 
-            selected_move = np.random.choice(a=list(pattern_moves.keys()), size=1, p=list(pattern_moves.values()))
+            selected_move = np.random.choice(a=list(pattern_moves.keys()),  p=list(pattern_moves.values()))
             board.fast_play_move(selected_move, board.current_player)
             if color==vp:
                 moves.add(selected_move)
